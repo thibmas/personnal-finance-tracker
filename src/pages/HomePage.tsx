@@ -1,0 +1,135 @@
+import React from 'react';
+import { Link } from 'react-router-dom';
+import { 
+  TrendingUp, TrendingDown, Plus, Eye, DollarSign, ArrowRight 
+} from 'lucide-react';
+import { format, subDays } from 'date-fns';
+import { useData } from '../context/DataContext';
+import { 
+  formatCurrency, getNetBalance, getTransactionsTotalByType 
+} from '../utils/formatters';
+import BalanceCard from '../components/dashboard/BalanceCard';
+import TransactionList from '../components/transactions/TransactionList';
+import ExpenseChart from '../components/charts/ExpenseChart';
+
+const HomePage: React.FC = () => {
+  const { transactions, settings } = useData();
+  
+  // Get current month's transactions
+  const today = new Date();
+  const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  const currentMonthTransactions = transactions.filter(
+    (transaction) => new Date(transaction.date) >= startOfMonth
+  );
+  
+  const netBalance = getNetBalance(currentMonthTransactions);
+  const totalIncome = getTransactionsTotalByType(currentMonthTransactions, 'income');
+  const totalExpenses = getTransactionsTotalByType(currentMonthTransactions, 'expense');
+  
+  // Get recent transactions (last 5 of each type)
+  const recentExpenses = transactions
+    .filter((t) => t.type === 'expense')
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .slice(0, 5);
+    
+  const recentIncome = transactions
+    .filter((t) => t.type === 'income')
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .slice(0, 5);
+  
+  return (
+    <div className="page-container">
+      <header className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Financial Overview</h1>
+        <div className="text-sm text-gray-500 dark:text-gray-400">
+          {format(today, 'MMMM yyyy')}
+        </div>
+      </header>
+      
+      <section className="mb-8 animate-fade-in">
+        <BalanceCard 
+          balance={netBalance}
+          income={totalIncome}
+          expenses={totalExpenses}
+          currency={settings.currency}
+        />
+      </section>
+      
+      <section className="mb-8 animate-fade-in">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-lg font-semibold">Expense Breakdown</h2>
+          <Link to="/reports" className="text-primary-600 dark:text-primary-400 flex items-center text-sm">
+            <span className="mr-1">View Reports</span>
+            <ArrowRight size={16} />
+          </Link>
+        </div>
+        <div className="card h-64">
+          <ExpenseChart transactions={currentMonthTransactions} />
+        </div>
+      </section>
+      
+      <section className="mb-8 animate-fade-in">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-lg font-semibold">Recent Expenses</h2>
+          <Link to="/expenses" className="text-primary-600 dark:text-primary-400 flex items-center text-sm">
+            <span className="mr-1">View All</span>
+            <ArrowRight size={16} />
+          </Link>
+        </div>
+        {recentExpenses.length > 0 ? (
+          <TransactionList transactions={recentExpenses} limit={5} />
+        ) : (
+          <div className="card flex flex-col items-center justify-center py-8">
+            <TrendingDown size={48} className="text-gray-400 mb-4" />
+            <p className="text-gray-500 dark:text-gray-400 mb-4">No recent expenses</p>
+            <Link to="/expenses/add" className="btn-primary flex items-center">
+              <Plus size={16} className="mr-2" />
+              Add Expense
+            </Link>
+          </div>
+        )}
+      </section>
+      
+      <section className="mb-8 animate-fade-in">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-lg font-semibold">Recent Income</h2>
+          <Link to="/income" className="text-primary-600 dark:text-primary-400 flex items-center text-sm">
+            <span className="mr-1">View All</span>
+            <ArrowRight size={16} />
+          </Link>
+        </div>
+        {recentIncome.length > 0 ? (
+          <TransactionList transactions={recentIncome} limit={5} />
+        ) : (
+          <div className="card flex flex-col items-center justify-center py-8">
+            <TrendingUp size={48} className="text-gray-400 mb-4" />
+            <p className="text-gray-500 dark:text-gray-400 mb-4">No recent income</p>
+            <Link to="/income/add" className="btn-secondary flex items-center">
+              <Plus size={16} className="mr-2" />
+              Add Income
+            </Link>
+          </div>
+        )}
+      </section>
+      
+      <div className="fixed bottom-20 right-4 flex flex-col space-y-4">
+        <Link
+          to="/expenses/add"
+          className="bg-primary-600 text-white rounded-full p-3 shadow-lg hover:bg-primary-700 transition-all"
+          aria-label="Add expense"
+        >
+          <TrendingDown size={24} />
+        </Link>
+        <Link
+          to="/income/add"
+          className="bg-accent-600 text-white rounded-full p-3 shadow-lg hover:bg-accent-700 transition-all"
+          aria-label="Add income"
+        >
+          <TrendingUp size={24} />
+        </Link>
+      </div>
+    </div>
+  );
+};
+
+export default HomePage;
