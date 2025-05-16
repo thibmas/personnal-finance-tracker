@@ -69,28 +69,32 @@ const ImportExportPage: React.FC = () => {
         if (result && result instanceof ArrayBuffer) {
           const data = new Uint8Array(result);
           const workbook = XLSX.read(data, { type: 'array' });
-          // Feuilles attendues
-          const sheetNames = workbook.SheetNames;
-          // Dépenses
-          let expenses: any[] = [];
-          if (sheetNames.includes('Dépenses')) {
-            expenses = XLSX.utils.sheet_to_json(workbook.Sheets['Dépenses']);
-          }
-          // Revenus
-          let incomes: any[] = [];
-          if (sheetNames.includes('Revenus')) {
-            incomes = XLSX.utils.sheet_to_json(workbook.Sheets['Revenus']);
+          // Nouvelle structure : toutes les opérations dans "Opérations"
+          let transactions: any[] = [];
+          if (workbook.SheetNames.includes('Opérations')) {
+            const ops = XLSX.utils.sheet_to_json(workbook.Sheets['Opérations']);
+            transactions = ops.map((item: any, idx: number) => ({
+              id: item.ID || `${Date.now()}_op_${idx}`,
+              date: item.Date || '',
+              category: item.Category || '',
+              amount: Number(item.Amount) || 0,
+              type: Number(item.Amount) < 0 ? 'expense' : 'income',
+              notes: item.Notes || '',
+              description: item.Description || '',
+              paymentMethod: item.PaymentMethod || '',
+              source: item.Source || '',
+            }));
           }
           // Catégories
           let categories: any[] = [];
-          if (sheetNames.includes('Catégories')) {
+          if (workbook.SheetNames.includes('Catégories')) {
             categories = XLSX.utils.sheet_to_json(workbook.Sheets['Catégories']);
           } else {
             categories = defaultCategories;
           }
           // Paramètres
           let settings: any = undefined;
-          if (sheetNames.includes('Paramètres')) {
+          if (workbook.SheetNames.includes('Paramètres')) {
             const settingsArr = XLSX.utils.sheet_to_json(workbook.Sheets['Paramètres']);
             settings = settingsArr[0];
           } else {
@@ -102,32 +106,9 @@ const ImportExportPage: React.FC = () => {
           }
           // Budgets planifiés
           let plannedBudgets: any[] = [];
-          if (sheetNames.includes('Budgets planifiés')) {
+          if (workbook.SheetNames.includes('Budgets planifiés')) {
             plannedBudgets = XLSX.utils.sheet_to_json(workbook.Sheets['Budgets planifiés']);
           }
-          // Fusionne dépenses et revenus en transactions
-          const transactions = [
-            ...expenses.map((item, idx) => ({
-              id: `${Date.now()}_expense_${idx}`,
-              date: item.Date || '',
-              category: item.Category || '',
-              amount: Number(item.Amount) || 0,
-              type: 'expense' as 'expense',
-              notes: item.Notes || '',
-              description: item.Description || '',
-              paymentMethod: item.PaymentMethod || '',
-            })),
-            ...incomes.map((item, idx) => ({
-              id: `${Date.now()}_income_${idx}`,
-              date: item.Date || '',
-              category: item.Category || '',
-              amount: Number(item.Amount) || 0,
-              type: 'income' as 'income',
-              notes: item.Notes || '',
-              description: item.Description || '',
-              source: item.Source || '',
-            })),
-          ];
           // Budgets : ajoute isTemplate true pour les planifiés
           const budgets = plannedBudgets.map((b: any, idx: number) => ({
             id: b.ID || `${Date.now()}_budget_${idx}`,
@@ -183,23 +164,14 @@ const ImportExportPage: React.FC = () => {
   };
 
   const handleExportToExcel = () => {
-    // Dépenses
-    const expenses = transactions.filter(t => t.type === 'expense').map(t => ({
+    // Nouvelle structure : toutes les opérations dans "Opérations"
+    const operations = transactions.map(t => ({
       ID: t.id,
       Date: t.date,
       Category: t.category,
-      Amount: t.amount,
+      Amount: t.type === 'expense' ? -Math.abs(t.amount) : Math.abs(t.amount),
       Description: t.description,
       PaymentMethod: t.paymentMethod || '',
-      Notes: t.notes || '',
-    }));
-    // Revenus
-    const incomes = transactions.filter(t => t.type === 'income').map(t => ({
-      ID: t.id,
-      Date: t.date,
-      Category: t.category,
-      Amount: t.amount,
-      Description: t.description,
       Source: t.source || '',
       Notes: t.notes || '',
     }));
@@ -224,8 +196,7 @@ const ImportExportPage: React.FC = () => {
     }));
 
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(expenses), 'Dépenses');
-    XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(incomes), 'Revenus');
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(operations), 'Opérations');
     XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(categoriesSheet), 'Catégories');
     XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(settingsSheet), 'Paramètres');
     XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(plannedBudgets), 'Budgets planifiés');
