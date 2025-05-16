@@ -3,26 +3,26 @@ import { AppData } from '../types';
 const STORAGE_KEY = 'finance_tracker_data';
 
 // Default categories
-const defaultCategories = [
-  { id: '1', name: 'Food', type: 'expense', color: '#EF4444' },
-  { id: '2', name: 'Transport', type: 'expense', color: '#F59E0B' },
-  { id: '3', name: 'Housing', type: 'expense', color: '#10B981' },
-  { id: '4', name: 'Entertainment', type: 'expense', color: '#6366F1' },
-  { id: '5', name: 'Healthcare', type: 'expense', color: '#EC4899' },
-  { id: '6', name: 'Shopping', type: 'expense', color: '#8B5CF6' },
-  { id: '7', name: 'Utilities', type: 'expense', color: '#14B8A6' },
-  { id: '8', name: 'Other Expense', type: 'expense', color: '#6B7280' },
-  { id: '9', name: 'Salary', type: 'income', color: '#22C55E' },
-  { id: '10', name: 'Freelance', type: 'income', color: '#3B82F6' },
-  { id: '11', name: 'Gifts', type: 'income', color: '#D946EF' },
-  { id: '12', name: 'Other Income', type: 'income', color: '#64748B' },
+export const defaultCategories = [
+  { id: '1', name: 'Food', type: 'expense' as const, color: '#EF4444' },
+  { id: '2', name: 'Transport', type: 'expense' as const, color: '#F59E0B' },
+  { id: '3', name: 'Housing', type: 'expense' as const, color: '#10B981' },
+  { id: '4', name: 'Entertainment', type: 'expense' as const, color: '#6366F1' },
+  { id: '5', name: 'Healthcare', type: 'expense' as const, color: '#EC4899' },
+  { id: '6', name: 'Shopping', type: 'expense' as const, color: '#8B5CF6' },
+  { id: '7', name: 'Utilities', type: 'expense' as const, color: '#14B8A6' },
+  { id: '8', name: 'Other Expense', type: 'expense' as const, color: '#6B7280' },
+  { id: '9', name: 'Salary', type: 'income' as const, color: '#22C55E' },
+  { id: '10', name: 'Freelance', type: 'income' as const, color: '#3B82F6' },
+  { id: '11', name: 'Gifts', type: 'income' as const, color: '#D946EF' },
+  { id: '12', name: 'Other Income', type: 'income' as const, color: '#64748B' },
 ];
 
 // Default settings
 const defaultSettings = {
   currency: 'USD',
   firstDayOfMonth: 1,
-  theme: 'system',
+  theme: 'system' as 'system',
 };
 
 // Initial app data

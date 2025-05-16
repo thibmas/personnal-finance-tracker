@@ -3,6 +3,8 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Edit, Trash, AlertTriangle } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import { formatCurrency, formatDate } from '../utils/formatters';
+import CategoryBadge from '../components/ui/CategoryBadge';
+import ConfirmDialog from '../components/ui/ConfirmDialog';
 
 interface TransactionDetailPageProps {
   type: 'expense' | 'income';
@@ -13,10 +15,10 @@ const TransactionDetailPage: React.FC<TransactionDetailPageProps> = ({ type }) =
   const navigate = useNavigate();
   const { transactions, categories, settings, deleteTransaction } = useData();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  
+
   const transaction = transactions.find((t) => t.id === id);
   const category = categories.find((c) => c.name === transaction?.category);
-  
+
   if (!transaction || transaction.type !== type) {
     return (
       <div className="page-container">
@@ -33,12 +35,12 @@ const TransactionDetailPage: React.FC<TransactionDetailPageProps> = ({ type }) =
       </div>
     );
   }
-  
+
   const handleDelete = () => {
     deleteTransaction(transaction.id);
     navigate(`/${type}s`);
   };
-  
+
   return (
     <div className="page-container">
       <header className="flex items-center justify-between mb-6">
@@ -70,55 +72,50 @@ const TransactionDetailPage: React.FC<TransactionDetailPageProps> = ({ type }) =
           </button>
         </div>
       </header>
-      
+
       <div className="card mb-6 relative overflow-hidden">
-        <div 
+        <div
           className="absolute top-0 right-0 w-32 h-32 rounded-bl-full opacity-10"
           style={{ backgroundColor: category?.color || '#6B7280' }}
         />
-        
+
         <div className="flex justify-between items-start mb-6">
           <div>
             <h2 className="text-xl font-bold mb-2">{transaction.description}</h2>
             <div className="flex items-center">
-              <div 
-                className="w-6 h-6 rounded-full flex items-center justify-center mr-2"
-                style={{ backgroundColor: category?.color + '30' }}
-              >
-                <span style={{ color: category?.color }}>{transaction.category.charAt(0)}</span>
-              </div>
+              <CategoryBadge color={category?.color} label={transaction.category} />
               <span className="text-gray-600 dark:text-gray-300">{transaction.category}</span>
             </div>
           </div>
           <div className={`text-2xl font-bold ${
-            type === 'expense' 
-              ? 'text-red-500 dark:text-red-400' 
+            type === 'expense'
+              ? 'text-red-500 dark:text-red-400'
               : 'text-green-500 dark:text-green-400'
           }`}>
             {type === 'expense' ? '−' : '+'}{formatCurrency(transaction.amount, settings.currency)}
           </div>
         </div>
-        
+
         <div className="border-t border-gray-100 dark:border-gray-800 pt-4 grid grid-cols-2 gap-4">
           <div>
             <h3 className="text-sm text-gray-500 dark:text-gray-400 mb-1">Date</h3>
             <p>{formatDate(transaction.date)}</p>
           </div>
-          
+
           {transaction.paymentMethod && (
             <div>
               <h3 className="text-sm text-gray-500 dark:text-gray-400 mb-1">Payment Method</h3>
               <p>{transaction.paymentMethod}</p>
             </div>
           )}
-          
+
           {transaction.source && (
             <div>
               <h3 className="text-sm text-gray-500 dark:text-gray-400 mb-1">Source</h3>
               <p>{transaction.source}</p>
             </div>
           )}
-          
+
           {transaction.notes && (
             <div className="col-span-2">
               <h3 className="text-sm text-gray-500 dark:text-gray-400 mb-1">Notes</h3>
@@ -127,31 +124,14 @@ const TransactionDetailPage: React.FC<TransactionDetailPageProps> = ({ type }) =
           )}
         </div>
       </div>
-      
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50 p-4">
-          <div className="card max-w-sm w-full animate-fade-in">
-            <h3 className="text-xl font-bold mb-4">Delete Transaction?</h3>
-            <p className="text-gray-600 dark:text-gray-300 mb-6">
-              Are you sure you want to delete this {type}? This action cannot be undone.
-            </p>
-            <div className="flex justify-end space-x-3">
-              <button
-                className="btn-outline"
-                onClick={() => setShowDeleteConfirm(false)}
-              >
-                Cancel
-              </button>
-              <button
-                className="btn bg-red-500 hover:bg-red-600 text-white"
-                onClick={handleDelete}
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        title="Delete Transaction?"
+        message={`Are you sure you want to delete this ${type}? This action cannot be undone.`}
+        onCancel={() => setShowDeleteConfirm(false)}
+        onConfirm={handleDelete}
+      />
     </div>
   );
 };

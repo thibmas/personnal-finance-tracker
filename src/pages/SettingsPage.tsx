@@ -6,12 +6,13 @@ import {
 } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import { useTheme } from '../context/ThemeContext';
-import { exportData, exportCSV } from '../utils/storage';
+import { exportData, exportCSV, defaultCategories } from '../utils/storage';
 import { useTranslation } from 'react-i18next';
+import * as XLSX from 'xlsx';
 
 const SettingsPage: React.FC = () => {
   const { t } = useTranslation();
-  const { settings, updateSettings, resetData } = useData();
+  const { settings, updateSettings, resetData, transactions, importData } = useData();
   const { theme, toggleTheme } = useTheme();
   const [showResetConfirm, setShowResetConfirm] = React.useState(false);
   
@@ -37,8 +38,70 @@ const SettingsPage: React.FC = () => {
   };
   
   const handleReset = () => {
-    resetData();
+    // Réinitialise toutes les données et restaure les catégories par défaut
+    updateSettings({
+      currency: 'USD',
+      firstDayOfMonth: 1,
+      theme: 'system',
+    });
+    // Remet les catégories par défaut et vide transactions et budgets
+    // On suppose que useData expose une méthode importData ou setData
+    if (typeof window !== 'undefined' && window.localStorage) {
+      window.localStorage.removeItem('finance_tracker_data');
+    }
+    // Si importData est disponible dans useData
+    if (typeof importData === 'function') {
+      importData({
+        transactions: [],
+        budgets: [],
+        categories: defaultCategories,
+        settings: {
+          currency: 'USD',
+          firstDayOfMonth: 1,
+          theme: 'system',
+        },
+      });
+    } else if (typeof resetData === 'function') {
+      // Fallback : resetData recharge les données initiales (qui incluent les catégories par défaut)
+      resetData();
+    }
     setShowResetConfirm(false);
+  };
+
+  const handleExportToExcel = () => {
+    const data = transactions.map(transaction => ({
+      Date: transaction.date,
+      Category: transaction.category,
+      Amount: transaction.amount,
+      Type: transaction.type,
+      Notes: transaction.notes || '',
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Transactions');
+
+    XLSX.writeFile(workbook, 'transactions.xlsx');
+  };
+
+  const handleImportFromExcel = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const result = event.target && event.target.result;
+      if (result && result instanceof ArrayBuffer) {
+        const data = new Uint8Array(result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+        console.log('Imported data:', jsonData);
+        // Process and save the imported data
+      } else {
+        console.error('Failed to read file as ArrayBuffer.');
+      }
+    };
+    reader.readAsArrayBuffer(file);
   };
   
   return (
@@ -172,34 +235,12 @@ const SettingsPage: React.FC = () => {
                 {t('settings.transactionsCSV')}
               </button>
               <button
-                onClick={() => document.getElementById('fileInput')?.click()}
+                onClick={() => handleExportToExcel()}
                 className="btn-outline flex items-center justify-center"
               >
-                <Upload size={18} className="mr-2" />
-                {t('settings.importData')}
+                <Download size={18} className="mr-2" />
+                {t('settings.exportToExcel')}
               </button>
-              <input
-                id="fileInput"
-                type="file"
-                accept=".json"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) {
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                      try {
-                        const data = JSON.parse(event.target?.result as string);
-                        // Call a function to import data
-                        console.log('Imported data:', data);
-                      } catch (error) {
-                        console.error('Invalid file format');
-                      }
-                    };
-                    reader.readAsText(file);
-                  }
-                }}
-              />
             </div>
           </div>
           

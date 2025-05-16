@@ -26,7 +26,7 @@ function App() {
         <Route path="expenses/:id" element={<TransactionDetailPage type="expense" />} />
         <Route path="income" element={<IncomePage />} />
         <Route path="income/add" element={<AddTransactionPage type="income" />} />
-        <Route path="income/:id" element={<TransactionDetailPage type="income" />} />
+        <Route path="incomes/:id" element={<TransactionDetailPage type="income" />} />
         <Route path="budgets" element={<BudgetsPage />} />
         <Route path="budgets/planned" element={<PlannedBudgetPage />} />
         <Route path="budgets/:id" element={<BudgetDetailPage />} />

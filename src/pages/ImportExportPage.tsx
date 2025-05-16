@@ -2,12 +2,14 @@ import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, FileUp, FileDown, CheckCircle, AlertCircle } from 'lucide-react';
 import { useData } from '../context/DataContext';
-import { exportData, exportCSV, importData as importDataUtil } from '../utils/storage';
+import { exportData, exportCSV, importData as importDataUtil, defaultCategories } from '../utils/storage';
+import * as XLSX from 'xlsx';
 
 const ImportExportPage: React.FC = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { importData } = useData();
+  const excelInputRef = useRef<HTMLInputElement>(null);
+  const { importData, transactions, categories, settings, budgets } = useData();
   
   const [importing, setImporting] = useState(false);
   const [importStatus, setImportStatus] = useState<{
@@ -18,6 +20,12 @@ const ImportExportPage: React.FC = () => {
   const handleImport = () => {
     if (fileInputRef.current) {
       fileInputRef.current.click();
+    }
+  };
+
+  const handleImportExcel = () => {
+    if (excelInputRef.current) {
+      excelInputRef.current.click();
     }
   };
   
@@ -48,6 +56,181 @@ const ImportExportPage: React.FC = () => {
       }
     }
   };
+
+  const handleExcelFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImporting(true);
+    setImportStatus(null);
+    try {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const result = event.target && event.target.result;
+        if (result && result instanceof ArrayBuffer) {
+          const data = new Uint8Array(result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          // Feuilles attendues
+          const sheetNames = workbook.SheetNames;
+          // Dépenses
+          let expenses: any[] = [];
+          if (sheetNames.includes('Dépenses')) {
+            expenses = XLSX.utils.sheet_to_json(workbook.Sheets['Dépenses']);
+          }
+          // Revenus
+          let incomes: any[] = [];
+          if (sheetNames.includes('Revenus')) {
+            incomes = XLSX.utils.sheet_to_json(workbook.Sheets['Revenus']);
+          }
+          // Catégories
+          let categories: any[] = [];
+          if (sheetNames.includes('Catégories')) {
+            categories = XLSX.utils.sheet_to_json(workbook.Sheets['Catégories']);
+          } else {
+            categories = defaultCategories;
+          }
+          // Paramètres
+          let settings: any = undefined;
+          if (sheetNames.includes('Paramètres')) {
+            const settingsArr = XLSX.utils.sheet_to_json(workbook.Sheets['Paramètres']);
+            settings = settingsArr[0];
+          } else {
+            settings = {
+              currency: 'EUR',
+              firstDayOfMonth: 1,
+              theme: 'system',
+            };
+          }
+          // Budgets planifiés
+          let plannedBudgets: any[] = [];
+          if (sheetNames.includes('Budgets planifiés')) {
+            plannedBudgets = XLSX.utils.sheet_to_json(workbook.Sheets['Budgets planifiés']);
+          }
+          // Fusionne dépenses et revenus en transactions
+          const transactions = [
+            ...expenses.map((item, idx) => ({
+              id: `${Date.now()}_expense_${idx}`,
+              date: item.Date || '',
+              category: item.Category || '',
+              amount: Number(item.Amount) || 0,
+              type: 'expense' as 'expense',
+              notes: item.Notes || '',
+              description: item.Description || '',
+              paymentMethod: item.PaymentMethod || '',
+            })),
+            ...incomes.map((item, idx) => ({
+              id: `${Date.now()}_income_${idx}`,
+              date: item.Date || '',
+              category: item.Category || '',
+              amount: Number(item.Amount) || 0,
+              type: 'income' as 'income',
+              notes: item.Notes || '',
+              description: item.Description || '',
+              source: item.Source || '',
+            })),
+          ];
+          // Budgets : ajoute isTemplate true pour les planifiés
+          const budgets = plannedBudgets.map((b: any, idx: number) => ({
+            id: b.ID || `${Date.now()}_budget_${idx}`,
+            category: b.Category || '',
+            amount: Number(b.Amount) || 0,
+            period: b.Period || 'monthly',
+            startDate: b.StartDate || new Date().toISOString().split('T')[0],
+            notes: b.Notes || '',
+            isTemplate: true,
+          }));
+          // Catégories : typage correct
+          const categoriesTyped = categories.map((c: any, idx: number) => ({
+            id: c.ID || c.id || `${Date.now()}_cat_${idx}`,
+            name: c.Name || c.name || '',
+            type: c.Type || c.type || 'expense',
+            color: c.Color || c.color || '#6B7280',
+            icon: c.Icon || c.icon || undefined,
+          }));
+          // Paramètres : typage correct
+          const settingsTyped = {
+            currency: settings.currency || 'EUR',
+            firstDayOfMonth: Number(settings.firstDayOfMonth) || 1,
+            theme: settings.theme || 'system',
+          };
+          const appData = {
+            transactions,
+            budgets,
+            categories: categoriesTyped,
+            settings: settingsTyped,
+          };
+          importData(appData);
+          setImportStatus({
+            type: 'success',
+            message: 'Excel data imported successfully!',
+          });
+        } else {
+          setImportStatus({
+            type: 'error',
+            message: 'Failed to read Excel file.',
+          });
+        }
+        setImporting(false);
+        if (e.target) e.target.value = '';
+      };
+      reader.readAsArrayBuffer(file);
+    } catch (error) {
+      setImportStatus({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Failed to import Excel data',
+      });
+      setImporting(false);
+    }
+  };
+
+  const handleExportToExcel = () => {
+    // Dépenses
+    const expenses = transactions.filter(t => t.type === 'expense').map(t => ({
+      ID: t.id,
+      Date: t.date,
+      Category: t.category,
+      Amount: t.amount,
+      Description: t.description,
+      PaymentMethod: t.paymentMethod || '',
+      Notes: t.notes || '',
+    }));
+    // Revenus
+    const incomes = transactions.filter(t => t.type === 'income').map(t => ({
+      ID: t.id,
+      Date: t.date,
+      Category: t.category,
+      Amount: t.amount,
+      Description: t.description,
+      Source: t.source || '',
+      Notes: t.notes || '',
+    }));
+    // Catégories
+    const categoriesSheet = categories.map(c => ({
+      ID: c.id,
+      Name: c.name,
+      Type: c.type,
+      Color: c.color,
+      Icon: c.icon || '',
+    }));
+    // Paramètres
+    const settingsSheet = [settings];
+    // Budgets planifiés
+    const plannedBudgets = budgets.filter(b => b.isTemplate).map(b => ({
+      ID: b.id,
+      Category: b.category,
+      Amount: b.amount,
+      Period: b.period,
+      StartDate: b.startDate,
+      Notes: b.notes || '',
+    }));
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(expenses), 'Dépenses');
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(incomes), 'Revenus');
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(categoriesSheet), 'Catégories');
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(settingsSheet), 'Paramètres');
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(plannedBudgets), 'Budgets planifiés');
+    XLSX.writeFile(workbook, 'finance_tracker_export.xlsx');
+  };
   
   return (
     <div className="page-container">
@@ -75,7 +258,13 @@ const ImportExportPage: React.FC = () => {
             <FileDown size={20} className="mr-2" />
             Export All Data (JSON)
           </button>
-          
+          <button
+            onClick={handleExportToExcel}
+            className="w-full btn-outline flex items-center justify-center"
+          >
+            <FileDown size={20} className="mr-2" />
+            Export Transactions (Excel)
+          </button>
           <div className="grid grid-cols-2 gap-4">
             <button
               onClick={() => exportCSV('transactions')}
@@ -116,6 +305,22 @@ const ImportExportPage: React.FC = () => {
             ref={fileInputRef}
             onChange={handleFileChange}
             accept=".json"
+            className="hidden"
+          />
+
+          <button
+            onClick={handleImportExcel}
+            className="w-full btn-outline flex items-center justify-center"
+            disabled={importing}
+          >
+            <FileUp size={20} className="mr-2" />
+            {importing ? 'Importing...' : 'Import from Excel (.xlsx)'}
+          </button>
+          <input
+            type="file"
+            ref={excelInputRef}
+            onChange={handleExcelFileChange}
+            accept=".xlsx, .xls"
             className="hidden"
           />
           
