@@ -171,6 +171,35 @@ const SettingsPage: React.FC = () => {
                 <Download size={18} className="mr-2" />
                 {t('settings.transactionsCSV')}
               </button>
+              <button
+                onClick={() => document.getElementById('fileInput')?.click()}
+                className="btn-outline flex items-center justify-center"
+              >
+                <Upload size={18} className="mr-2" />
+                {t('settings.importData')}
+              </button>
+              <input
+                id="fileInput"
+                type="file"
+                accept=".json"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                      try {
+                        const data = JSON.parse(event.target?.result as string);
+                        // Call a function to import data
+                        console.log('Imported data:', data);
+                      } catch (error) {
+                        console.error('Invalid file format');
+                      }
+                    };
+                    reader.readAsText(file);
+                  }
+                }}
+              />
             </div>
           </div>
           

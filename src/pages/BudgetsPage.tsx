@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Filter, AlertTriangle, Copy } from 'lucide-react';
+import { Plus, Filter, AlertTriangle, Copy, ClipboardList } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import { 
   formatCurrency, 
@@ -8,9 +8,10 @@ import {
   getBudgetRemaining,
   getBudgetPercentage
 } from '../utils/formatters';
+import { useTranslation } from 'react-i18next';
 
 const BudgetsPage: React.FC = () => {
-  const { budgets, transactions, categories, settings, applyPlannedBudgets } = useData();
+  const { budgets, transactions, categories, settings, applyPlannedBudgets, addBudget, deleteBudget } = useData();
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const today = new Date();
     return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
@@ -53,9 +54,24 @@ const BudgetsPage: React.FC = () => {
   }
 
   const handleResetBudgets = () => {
-    applyPlannedBudgets();
+    // Clear existing monthly budgets
+    const nonTemplateBudgets = budgets.filter(b => !b.isTemplate);
+    nonTemplateBudgets.forEach(budget => deleteBudget(budget.id));
+
+    // Copy planned budgets as new monthly budgets
+    const plannedBudgets = budgets.filter(b => b.isTemplate);
+    plannedBudgets.forEach(plannedBudget => {
+      addBudget({
+        ...plannedBudget,
+        isTemplate: false,
+        startDate: new Date().toISOString().split('T')[0],
+      });
+    });
+
     setShowResetConfirm(false);
   };
+
+  const { t } = useTranslation();
   
   return (
     <div className="page-container">
@@ -179,7 +195,7 @@ const BudgetsPage: React.FC = () => {
           className="bg-accent-600 text-white rounded-full p-4 shadow-lg hover:bg-accent-700 transition-all"
           aria-label="Manage planned budgets"
         >
-          <Copy size={24} />
+          <ClipboardList size={24} />
         </Link>
         <Link
           to="/budgets/add"

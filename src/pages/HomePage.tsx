@@ -61,39 +61,41 @@ const HomePage: React.FC = () => {
         />
       </section>
       
-      <section className="mb-8 animate-fade-in">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold">{t('expenses.title')}</h2>
-          <Link to="/reports" className="text-primary-600 dark:text-primary-400 flex items-center text-sm">
-            <span className="mr-1">{t('view.all')}</span>
-            <ArrowRight size={16} />
-          </Link>
-        </div>
-        <div className="card h-64">
-          <ExpenseChart transactions={currentMonthTransactions} />
-        </div>
-      </section>
-      
-      <section className="mb-8 animate-fade-in">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold">{t('recent.expenses')}</h2>
-          <Link to="/expenses" className="text-primary-600 dark:text-primary-400 flex items-center text-sm">
-            <span className="mr-1">{t('view.all')}</span>
-            <ArrowRight size={16} />
-          </Link>
-        </div>
-        {recentExpenses.length > 0 ? (
-          <TransactionList transactions={recentExpenses} limit={5} />
-        ) : (
-          <div className="card flex flex-col items-center justify-center py-8">
-            <TrendingDown size={48} className="text-gray-400 mb-4" />
-            <p className="text-gray-500 dark:text-gray-400 mb-4">{t('no.recent.expenses')}</p>
-            <Link to="/expenses/add" className="btn-primary flex items-center">
-              <Plus size={16} className="mr-2" />
-              {t('add.expense')}
+      <section className="mb-8 animate-fade-in grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-semibold">{t('expenses.title')}</h2>
+            <Link to="/reports" className="text-primary-600 dark:text-primary-400 flex items-center text-sm">
+              <span className="mr-1">{t('view.all')}</span>
+              <ArrowRight size={16} />
             </Link>
           </div>
-        )}
+          <div className="card h-64">
+            <ExpenseChart transactions={currentMonthTransactions} />
+          </div>
+        </div>
+
+        <div>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-semibold">{t('recent.expenses')}</h2>
+            <Link to="/expenses" className="text-primary-600 dark:text-primary-400 flex items-center text-sm">
+              <span className="mr-1">{t('view.all')}</span>
+              <ArrowRight size={16} />
+            </Link>
+          </div>
+          {recentExpenses.length > 0 ? (
+            <TransactionList transactions={recentExpenses} limit={5} />
+          ) : (
+            <div className="card flex flex-col items-center justify-center py-8">
+              <TrendingDown size={48} className="text-gray-400 mb-4" />
+              <p className="text-gray-500 dark:text-gray-400 mb-4">{t('no.recent.expenses')}</p>
+              <Link to="/expenses/add" className="btn-primary flex items-center">
+                <Plus size={16} className="mr-2" />
+                {t('add.expense')}
+              </Link>
+            </div>
+          )}
+        </div>
       </section>
       
       <section className="mb-8 animate-fade-in">
