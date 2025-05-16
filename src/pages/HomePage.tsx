@@ -1,9 +1,10 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { 
   TrendingUp, TrendingDown, Plus, Eye, DollarSign, ArrowRight 
 } from 'lucide-react';
-import { format, subDays } from 'date-fns';
+import { format } from 'date-fns';
 import { useData } from '../context/DataContext';
 import { 
   formatCurrency, getNetBalance, getTransactionsTotalByType 
@@ -11,9 +12,11 @@ import {
 import BalanceCard from '../components/dashboard/BalanceCard';
 import TransactionList from '../components/transactions/TransactionList';
 import ExpenseChart from '../components/charts/ExpenseChart';
+import ChooseLanguage from '../components/ChooseLanguage'; // Import du composant
 
 const HomePage: React.FC = () => {
   const { transactions, settings } = useData();
+  const { t } = useTranslation(); // Hook pour les traductions
   
   // Get current month's transactions
   const today = new Date();
@@ -40,9 +43,12 @@ const HomePage: React.FC = () => {
   return (
     <div className="page-container">
       <header className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Financial Overview</h1>
-        <div className="text-sm text-gray-500 dark:text-gray-400">
-          {format(today, 'MMMM yyyy')}
+        <h1 className="text-2xl font-bold">{t('home.title')}</h1>
+        <div className="flex items-center space-x-4">
+          <div className="text-sm text-gray-500 dark:text-gray-400">
+            {format(today, 'MMMM yyyy')}
+          </div>
+          <ChooseLanguage /> {/* Ajout du composant ici */}
         </div>
       </header>
       
@@ -57,9 +63,9 @@ const HomePage: React.FC = () => {
       
       <section className="mb-8 animate-fade-in">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold">Expense Breakdown</h2>
+          <h2 className="text-lg font-semibold">{t('expenses.title')}</h2>
           <Link to="/reports" className="text-primary-600 dark:text-primary-400 flex items-center text-sm">
-            <span className="mr-1">View Reports</span>
+            <span className="mr-1">{t('view.all')}</span>
             <ArrowRight size={16} />
           </Link>
         </div>
@@ -70,9 +76,9 @@ const HomePage: React.FC = () => {
       
       <section className="mb-8 animate-fade-in">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold">Recent Expenses</h2>
+          <h2 className="text-lg font-semibold">{t('recent.expenses')}</h2>
           <Link to="/expenses" className="text-primary-600 dark:text-primary-400 flex items-center text-sm">
-            <span className="mr-1">View All</span>
+            <span className="mr-1">{t('view.all')}</span>
             <ArrowRight size={16} />
           </Link>
         </div>
@@ -81,10 +87,10 @@ const HomePage: React.FC = () => {
         ) : (
           <div className="card flex flex-col items-center justify-center py-8">
             <TrendingDown size={48} className="text-gray-400 mb-4" />
-            <p className="text-gray-500 dark:text-gray-400 mb-4">No recent expenses</p>
+            <p className="text-gray-500 dark:text-gray-400 mb-4">{t('no.recent.expenses')}</p>
             <Link to="/expenses/add" className="btn-primary flex items-center">
               <Plus size={16} className="mr-2" />
-              Add Expense
+              {t('add.expense')}
             </Link>
           </div>
         )}
@@ -92,9 +98,9 @@ const HomePage: React.FC = () => {
       
       <section className="mb-8 animate-fade-in">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold">Recent Income</h2>
+          <h2 className="text-lg font-semibold">{t('recent.income')}</h2>
           <Link to="/income" className="text-primary-600 dark:text-primary-400 flex items-center text-sm">
-            <span className="mr-1">View All</span>
+            <span className="mr-1">{t('view.all')}</span>
             <ArrowRight size={16} />
           </Link>
         </div>
@@ -103,10 +109,10 @@ const HomePage: React.FC = () => {
         ) : (
           <div className="card flex flex-col items-center justify-center py-8">
             <TrendingUp size={48} className="text-gray-400 mb-4" />
-            <p className="text-gray-500 dark:text-gray-400 mb-4">No recent income</p>
+            <p className="text-gray-500 dark:text-gray-400 mb-4">{t('no.recent.income')}</p>
             <Link to="/income/add" className="btn-secondary flex items-center">
               <Plus size={16} className="mr-2" />
-              Add Income
+              {t('add.income')}
             </Link>
           </div>
         )}

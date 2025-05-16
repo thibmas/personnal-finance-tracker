@@ -3,8 +3,8 @@ import { Transaction, Category, Budget } from '../types';
 
 export const formatCurrency = (
   amount: number,
-  currency = 'USD',
-  locale = 'en-US'
+  currency = 'EUR',
+  locale = 'fr-FR'
 ): string => {
   return new Intl.NumberFormat(locale, {
     style: 'currency',
