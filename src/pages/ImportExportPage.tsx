@@ -81,8 +81,6 @@ const ImportExportPage: React.FC = () => {
               type: Number(item.Amount) < 0 ? 'expense' : 'income',
               notes: item.Notes || '',
               description: item.Description || '',
-              paymentMethod: item.PaymentMethod || '',
-              source: item.Source || '',
             }));
           }
           // Catégories
@@ -171,8 +169,6 @@ const ImportExportPage: React.FC = () => {
       Category: t.category,
       Amount: t.type === 'expense' ? -Math.abs(t.amount) : Math.abs(t.amount),
       Description: t.description,
-      PaymentMethod: t.paymentMethod || '',
-      Source: t.source || '',
       Notes: t.notes || '',
     }));
     // Catégories

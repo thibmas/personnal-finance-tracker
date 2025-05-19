@@ -101,21 +101,6 @@ const TransactionDetailPage: React.FC<TransactionDetailPageProps> = ({ type }) =
             <h3 className="text-sm text-gray-500 dark:text-gray-400 mb-1">Date</h3>
             <p>{formatDate(transaction.date)}</p>
           </div>
-
-          {transaction.paymentMethod && (
-            <div>
-              <h3 className="text-sm text-gray-500 dark:text-gray-400 mb-1">Payment Method</h3>
-              <p>{transaction.paymentMethod}</p>
-            </div>
-          )}
-
-          {transaction.source && (
-            <div>
-              <h3 className="text-sm text-gray-500 dark:text-gray-400 mb-1">Source</h3>
-              <p>{transaction.source}</p>
-            </div>
-          )}
-
           {transaction.notes && (
             <div className="col-span-2">
               <h3 className="text-sm text-gray-500 dark:text-gray-400 mb-1">Notes</h3>

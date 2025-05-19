@@ -20,8 +20,6 @@ const AddTransactionPage: React.FC<AddTransactionPageProps> = ({ type }) => {
     date: new Date().toISOString().split('T')[0],
     category: filteredCategories[0]?.name || '',
     description: '',
-    paymentMethod: type === 'expense' ? 'Cash' : '',
-    source: type === 'income' ? '' : '',
     notes: '',
     type,
   });
@@ -133,44 +131,6 @@ const AddTransactionPage: React.FC<AddTransactionPageProps> = ({ type }) => {
               required
             />
           </div>
-          
-          {type === 'expense' && (
-            <div className="input-group">
-              <label htmlFor="paymentMethod" className="input-label">
-                Payment Method
-              </label>
-              <select
-                id="paymentMethod"
-                name="paymentMethod"
-                value={formData.paymentMethod}
-                onChange={handleChange}
-                className="w-full"
-              >
-                <option value="Cash">Cash</option>
-                <option value="Credit Card">Credit Card</option>
-                <option value="Debit Card">Debit Card</option>
-                <option value="Bank Transfer">Bank Transfer</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
-          )}
-          
-          {type === 'income' && (
-            <div className="input-group">
-              <label htmlFor="source" className="input-label">
-                Source (Optional)
-              </label>
-              <input
-                type="text"
-                id="source"
-                name="source"
-                placeholder="e.g., Company name"
-                value={formData.source}
-                onChange={handleChange}
-                className="w-full"
-              />
-            </div>
-          )}
           
           <div className="input-group mb-0">
             <label htmlFor="notes" className="input-label">

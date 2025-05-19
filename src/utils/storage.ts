@@ -107,11 +107,11 @@ export const exportCSV = (type: 'transactions' | 'budgets'): void => {
     
     if (type === 'transactions') {
       // Create headers
-      csv = 'ID,Type,Amount,Date,Category,Description,Payment Method,Source,Notes\n';
+      csv = 'ID,Type,Amount,Date,Category,Description,Notes\n';
       
       // Add rows
       data.transactions.forEach((t) => {
-        csv += `${t.id},${t.type},${t.amount},${t.date},${t.category},${t.description},${t.paymentMethod || ''},${t.source || ''},${t.notes || ''}\n`;
+        csv += `${t.id},${t.type},${t.amount},${t.date},${t.category},${t.description},${t.notes || ''}\n`;
       });
       
       filename = `transactions_${new Date().toISOString().split('T')[0]}.csv`;

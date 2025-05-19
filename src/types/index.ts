@@ -4,8 +4,6 @@ export interface Transaction {
   date: string;
   category: string;
   description: string;
-  paymentMethod?: string; // For expenses
-  source?: string; // For income
   notes?: string;
   type: 'expense' | 'income';
 }
