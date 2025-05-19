@@ -77,7 +77,7 @@ const ImportExportPage: React.FC = () => {
               id: item.ID || `${Date.now()}_op_${idx}`,
               date: item.Date || '',
               category: item.Category || '',
-              amount: Number(item.Amount) || 0,
+              amount: Number(Math.abs(item.Amount)) || 0,
               type: Number(item.Amount) < 0 ? 'expense' : 'income',
               notes: item.Notes || '',
               description: item.Description || '',

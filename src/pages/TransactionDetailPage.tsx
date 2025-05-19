@@ -65,8 +65,7 @@ const TransactionDetailPage: React.FC<TransactionDetailPageProps> = ({ type }) =
           </Link>
           <button
             className="btn-outline text-red-500 dark:text-red-400 border-red-500 dark:border-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center"
-            onClick={() => setShowDeleteConfirm(true)}
-          >
+            onClick={() => setShowDeleteConfirm(true)}>
             <Trash size={18} className="mr-1" />
             Delete
           </button>
