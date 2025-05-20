@@ -14,7 +14,8 @@ const PlannedBudgetPage: React.FC = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [selectedBudget, setSelectedBudget] = useState<Budget | null>(null);
   const [formData, setFormData] = useState({
-    category: '',
+    name: '',
+    categories: [] as string[],
     amount: '',
     notes: '',
   });
@@ -29,7 +30,8 @@ const PlannedBudgetPage: React.FC = () => {
 
   const handleAddBudget = () => {
     setFormData({
-      category: expenseCategories[0]?.name || '',
+      name: '',
+      categories: [],
       amount: '',
       notes: '',
     });
@@ -39,7 +41,8 @@ const PlannedBudgetPage: React.FC = () => {
   const handleEditBudget = (budget: Budget) => {
     setSelectedBudget(budget);
     setFormData({
-      category: budget.category,
+      name: budget.name || '',
+      categories: (budget.categories || [budget.category]).filter((c): c is string => typeof c === 'string'),
       amount: budget.amount.toString(),
       notes: budget.notes || '',
     });
@@ -51,10 +54,23 @@ const PlannedBudgetPage: React.FC = () => {
     setShowDeleteConfirm(true);
   };
 
+  const handleCategoryToggle = (category: string) => {
+    setFormData((prev) => {
+      const exists = prev.categories.includes(category);
+      return {
+        ...prev,
+        categories: exists
+          ? prev.categories.filter((c) => c !== category)
+          : [...prev.categories, category],
+      };
+    });
+  };
+
   const handleSubmitAdd = (e: React.FormEvent) => {
     e.preventDefault();
     addBudget({
-      category: formData.category,
+      name: formData.name,
+      categories: formData.categories,
       amount: parseFloat(formData.amount),
       period: 'monthly',
       startDate: new Date().toISOString().split('T')[0],
@@ -69,7 +85,8 @@ const PlannedBudgetPage: React.FC = () => {
     if (selectedBudget) {
       updateBudget({
         ...selectedBudget,
-        category: formData.category,
+        name: formData.name,
+        categories: formData.categories,
         amount: parseFloat(formData.amount),
         notes: formData.notes,
       });
@@ -116,34 +133,50 @@ const PlannedBudgetPage: React.FC = () => {
         {plannedBudgets.length > 0 ? (
           <div className="divide-y divide-gray-100 dark:divide-gray-800">
             {plannedBudgets.map((budget) => {
-              const category = categories.find((c) => c.name === budget.category);
-              
+              const budgetCategories = (budget.categories && Array.isArray(budget.categories)
+                ? budget.categories
+                : [budget.category]
+              ).filter((c): c is string => typeof c === 'string');
+              const categoryBadges = budgetCategories.slice(0, 3).map((catName: string) => {
+                const cat = categories.find((c) => c.name === catName);
+                return cat ? (
+                  <div
+                    key={catName}
+                    className="w-8 h-8 rounded-full mr-1 flex items-center justify-center"
+                    style={{ backgroundColor: cat.color + '30' }}
+                    title={catName}
+                  >
+                    <span style={{ color: cat.color, fontSize: 16 }}>{catName.charAt(0)}</span>
+                  </div>
+                ) : null;
+              });
+              const extraCount = budgetCategories.length - 3;
+              let extraBadge = null;
+              if (extraCount > 0) {
+                const extraNames = budgetCategories.slice(3).join(', ');
+                extraBadge = (
+                  <div
+                    className="w-8 h-8 rounded-full mr-1 flex items-center justify-center bg-gray-300 text-gray-700 text-xs cursor-pointer"
+                    title={extraNames}
+                  >
+                    +{extraCount}
+                  </div>
+                );
+              }
               return (
                 <div
                   key={budget.id}
                   className="py-4 flex items-center justify-between"
                 >
                   <div className="flex items-center">
-                    <div 
-                      className="w-10 h-10 rounded-full flex items-center justify-center mr-3"
-                      style={{ backgroundColor: category?.color + '30' }}
-                    >
-                      <span
-                        className="text-lg font-bold"
-                        style={{ color: category?.color }}
-                      >
-                        {budget.category.charAt(0)}
-                      </span>
-                    </div>
-                    
+                    <div className="flex flex-row mr-3">{categoryBadges}{extraBadge}</div>
                     <div>
-                      <div className="font-medium">{budget.category}</div>
+                      <div className="font-medium">{budget.name || budgetCategories.join(', ')}</div>
                       <div className="text-sm text-gray-500 dark:text-gray-400">
                         Monthly budget: {formatCurrency(budget.amount, settings.currency)}
                       </div>
                     </div>
                   </div>
-                  
                   <div className="flex items-center">
                     <button
                       onClick={() => handleEditBudget(budget)}
@@ -187,21 +220,30 @@ const PlannedBudgetPage: React.FC = () => {
             <h3 className="text-xl font-bold mb-4">Add Planned Budget</h3>
             <form onSubmit={handleSubmitAdd}>
               <div className="input-group">
-                <label htmlFor="category" className="input-label">Category</label>
-                <select
-                  id="category"
-                  value={formData.category}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                <label htmlFor="budget-name" className="input-label">Budget Name</label>
+                <input
+                  id="budget-name"
+                  type="text"
+                  value={formData.name}
+                  onChange={e => setFormData({ ...formData, name: e.target.value })}
                   className="w-full"
                   required
-                >
-                  <option value="">Select a category</option>
+                />
+              </div>
+              <div className="input-group">
+                <label className="input-label">Categories</label>
+                <div className="flex flex-wrap gap-2">
                   {expenseCategories.map((category) => (
-                    <option key={category.id} value={category.name}>
+                    <label key={category.id} className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={formData.categories.includes(category.name)}
+                        onChange={() => handleCategoryToggle(category.name)}
+                      />
                       {category.name}
-                    </option>
+                    </label>
                   ))}
-                </select>
+                </div>
               </div>
 
               <div className="input-group">
@@ -255,21 +297,30 @@ const PlannedBudgetPage: React.FC = () => {
             <h3 className="text-xl font-bold mb-4">Edit Planned Budget</h3>
             <form onSubmit={handleSubmitEdit}>
               <div className="input-group">
-                <label htmlFor="edit-category" className="input-label">Category</label>
-                <select
-                  id="edit-category"
-                  value={formData.category}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                <label htmlFor="edit-budget-name" className="input-label">Budget Name</label>
+                <input
+                  id="edit-budget-name"
+                  type="text"
+                  value={formData.name}
+                  onChange={e => setFormData({ ...formData, name: e.target.value })}
                   className="w-full"
                   required
-                >
-                  <option value="">Select a category</option>
+                />
+              </div>
+              <div className="input-group">
+                <label className="input-label">Categories</label>
+                <div className="flex flex-wrap gap-2">
                   {expenseCategories.map((category) => (
-                    <option key={category.id} value={category.name}>
+                    <label key={category.id} className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={formData.categories.includes(category.name)}
+                        onChange={() => handleCategoryToggle(category.name)}
+                      />
                       {category.name}
-                    </option>
+                    </label>
                   ))}
-                </select>
+                </div>
               </div>
 
               <div className="input-group">

@@ -13,6 +13,8 @@ import AddTransactionPage from './pages/AddTransactionPage';
 import TransactionDetailPage from './pages/TransactionDetailPage';
 import BudgetDetailPage from './pages/BudgetDetailPage';
 import PlannedBudgetPage from './pages/PlannedBudgetPage';
+import EditTransactionPage from './pages/EditTransactionPage';
+import EditBudgetPage from './pages/EditBudgetPage';
 
 function App() {
   const location = useLocation();
@@ -30,11 +32,14 @@ function App() {
         <Route path="budgets" element={<BudgetsPage />} />
         <Route path="budgets/planned" element={<PlannedBudgetPage />} />
         <Route path="budgets/:id" element={<BudgetDetailPage />} />
+        <Route path="budgets/:id/edit" element={<EditBudgetPage />} />
         <Route path="reports" element={<ReportsPage />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="settings/categories" element={<CategoriesPage />} />
         <Route path="settings/import-export" element={<ImportExportPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="/expenses/:id/edit" element={<EditTransactionPage />} /> 
+        <Route path="/incomes/:id/edit" element={<EditTransactionPage />} />
       </Route>
     </Routes>
   );

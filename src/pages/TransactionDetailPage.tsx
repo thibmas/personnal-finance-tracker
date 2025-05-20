@@ -46,7 +46,7 @@ const TransactionDetailPage: React.FC<TransactionDetailPageProps> = ({ type }) =
       <header className="flex items-center justify-between mb-6">
         <div className="flex items-center">
           <button
-            onClick={() => navigate(-1)}
+            onClick={() => navigate(type === 'expense' ? '/expenses' : '/incomes')}
             className="mr-4 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
           >
             <ArrowLeft size={24} />

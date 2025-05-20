@@ -23,6 +23,8 @@ const CategoriesPage: React.FC = () => {
     (category) => category.type === activeTab || category.type === 'both'
   );
   
+  const sortedCategories = filteredCategories.slice().sort((a, b) => a.name.localeCompare(b.name));
+  
   const handleAddCategory = () => {
     setFormData({
       name: '',
@@ -150,8 +152,8 @@ const CategoriesPage: React.FC = () => {
         </div>
         
         <div className="divide-y divide-gray-100 dark:divide-gray-800">
-          {filteredCategories.length > 0 ? (
-            filteredCategories.map((category) => (
+          {sortedCategories.length > 0 ? (
+            sortedCategories.map((category) => (
               <div
                 key={category.id}
                 className="py-3 flex items-center justify-between"

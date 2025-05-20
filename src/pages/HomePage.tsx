@@ -6,29 +6,37 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useData } from '../context/DataContext';
-import { 
-  formatCurrency, getNetBalance, getTransactionsTotalByType 
-} from '../utils/formatters';
 import BalanceCard from '../components/dashboard/BalanceCard';
 import TransactionList from '../components/transactions/TransactionList';
 import ExpenseChart from '../components/charts/ExpenseChart';
 import ChooseLanguage from '../components/ChooseLanguage'; // Import du composant
 
+// Fonction utilitaire pour obtenir la date de début de période personnalisée
+function getStartOfCurrentPeriod(startOfMonthDay: number): Date {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  if (now.getDate() < startOfMonthDay) {
+    // On est avant le jour de début, donc on prend le mois précédent
+    return new Date(year, month - 1, startOfMonthDay);
+  }
+  return new Date(year, month, startOfMonthDay);
+}
+
+function getEndOfCurrentPeriod(startOfMonthDay: number): Date {
+  const start = getStartOfCurrentPeriod(startOfMonthDay);
+  const end = new Date(start);
+  end.setMonth(end.getMonth() + 1);
+  return end;
+}
+
 const HomePage: React.FC = () => {
   const { transactions, settings } = useData();
   const { t } = useTranslation(); // Hook pour les traductions
   
-  // Get current month's transactions
-  const today = new Date();
-  const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-  const currentMonthTransactions = transactions.filter(
-    (transaction) => new Date(transaction.date) >= startOfMonth
-  );
-  
-  const netBalance = getNetBalance(currentMonthTransactions);
-  const totalIncome = getTransactionsTotalByType(currentMonthTransactions, 'income');
-  const totalExpenses = getTransactionsTotalByType(currentMonthTransactions, 'expense');
-  
+  // BalanceCard utilise maintenant le paramètre de début de mois
+  // settings.startOfMonthDay doit exister dans les paramètres
+
   // Get recent transactions (last 5 of each type)
   const recentExpenses = transactions
     .filter((t) => t.type === 'expense')
@@ -40,13 +48,22 @@ const HomePage: React.FC = () => {
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     .slice(0, 5);
   
+  const startPeriod = getStartOfCurrentPeriod(settings.firstDayOfMonth || 1);
+  const endPeriod = getEndOfCurrentPeriod(settings.firstDayOfMonth || 1);
+  const currentMonthTransactions = transactions.filter(
+    (t) => {
+      const d = new Date(t.date);
+      return d >= startPeriod && d < endPeriod;
+    }
+  );
+  
   return (
     <div className="page-container">
       <header className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">{t('home.title')}</h1>
         <div className="flex items-center space-x-4">
           <div className="text-sm text-gray-500 dark:text-gray-400">
-            {format(today, 'MMMM yyyy')}
+            {format(new Date(), 'MMMM yyyy')}
           </div>
           <ChooseLanguage /> {/* Ajout du composant ici */}
         </div>
@@ -54,10 +71,9 @@ const HomePage: React.FC = () => {
       
       <section className="mb-8 animate-fade-in">
         <BalanceCard 
-          balance={netBalance}
-          income={totalIncome}
-          expenses={totalExpenses}
+          transactions={currentMonthTransactions}
           currency={settings.currency}
+          startOfMonthDay={settings.firstDayOfMonth || 1}
         />
       </section>
       

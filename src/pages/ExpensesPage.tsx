@@ -1,21 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, Filter, Search } from 'lucide-react';
 import { useData } from '../context/DataContext';
-import { formatCurrency, getTransactionsTotalByType } from '../utils/formatters';
+import { formatCurrency } from '../utils/formatters';
 import TransactionList from '../components/transactions/TransactionList';
 import { FilterOptions } from '../types';
 
 const ExpensesPage: React.FC = () => {
   const { transactions, categories, settings } = useData();
-  const [searchTerm, setSearchTerm] = useState('');
+
+  // Charger les filtres depuis la sessionStorage
+  const sessionFilters = sessionStorage.getItem('expensesFilters');
+  const sessionSearch = sessionStorage.getItem('expensesSearchTerm');
+
+  const [searchTerm, setSearchTerm] = useState(sessionSearch || '');
   const [showFilters, setShowFilters] = useState(false);
-  const [filters, setFilters] = useState<FilterOptions>({
-    categories: [],
-    startDate: '',
-    endDate: '',
-  });
-  
+  const [filters, setFilters] = useState<FilterOptions>(
+    sessionFilters ? JSON.parse(sessionFilters) : { categories: [], startDate: '', endDate: '' }
+  );
+
+  // Sauvegarder les filtres et la recherche à chaque modification
+  useEffect(() => {
+    sessionStorage.setItem('expensesFilters', JSON.stringify(filters));
+  }, [filters]);
+
+  useEffect(() => {
+    sessionStorage.setItem('expensesSearchTerm', searchTerm);
+  }, [searchTerm]);
+
   // Get expense categories
   const expenseCategories = categories.filter(
     (category) => category.type === 'expense' || category.type === 'both'
@@ -49,8 +61,8 @@ const ExpensesPage: React.FC = () => {
       return true;
     })
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  
-  const totalExpenses = getTransactionsTotalByType(expenses, 'expense');
+
+  const totalExpenses = expenses.reduce((sum, t) => sum + t.amount, 0);
   
   const handleCategoryToggle = (category: string) => {
     setFilters((prevFilters) => {

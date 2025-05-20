@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Filter, AlertTriangle, Copy, ClipboardList } from 'lucide-react';
+import { Plus, Filter, AlertTriangle, Copy, ClipboardList, Scale } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import { 
   formatCurrency, 
@@ -11,12 +11,15 @@ import {
 import { useTranslation } from 'react-i18next';
 
 const BudgetsPage: React.FC = () => {
-  const { budgets, transactions, categories, settings, applyPlannedBudgets, addBudget, deleteBudget } = useData();
+  const { budgets, transactions, categories, settings, applyPlannedBudgets, addBudget, deleteBudget, updateBudget } = useData();
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const today = new Date();
     return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
   });
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [showBalanceModal, setShowBalanceModal] = useState(false);
+  const [overBudgetToBalance, setOverBudgetToBalance] = useState<any>(null);
+  const [selectedTargetBudget, setSelectedTargetBudget] = useState<string | null>(null);
   
   // Filter transactions by date range
   const [year, month] = selectedMonth.split('-').map(Number);
@@ -30,17 +33,27 @@ const BudgetsPage: React.FC = () => {
     new Date(b.startDate) < nextMonth
   );
   
-  // Calculate budget progress
+  // Adaptation pour gérer plusieurs catégories par budget
   const budgetsWithProgress = monthlyBudgets.map((budget) => {
-    const spent = getBudgetSpent(budget, transactions);
-    const remaining = getBudgetRemaining(budget, transactions);
-    const percentage = getBudgetPercentage(budget, transactions);
-    
+    // Supporte budget.categories (string[]) ou budget.category (string)
+    const budgetCategories = (budget.categories && Array.isArray(budget.categories)
+      ? budget.categories
+      : [budget.category]
+    ).filter((c): c is string => typeof c === 'string');
+
+    // Calcule le montant dépensé pour toutes les catégories du budget
+    const spent = transactions
+      .filter(t => budgetCategories.includes(t.category))
+      .reduce((sum, t) => sum + t.amount, 0);
+    const remaining = budget.amount - spent;
+    const percentage = Math.min((spent / budget.amount) * 100, 100);
+
     return {
       ...budget,
       spent,
       remaining,
       percentage,
+      budgetCategories,
     };
   }).sort((a, b) => b.percentage - a.percentage);
   
@@ -69,6 +82,35 @@ const BudgetsPage: React.FC = () => {
     });
 
     setShowResetConfirm(false);
+  };
+
+  // Fonction pour équilibrer les budgets
+  const handleBalanceClick = (budget: any) => {
+    setOverBudgetToBalance(budget);
+    setShowBalanceModal(true);
+  };
+
+  const handleSelectTargetBudget = (budgetId: string) => {
+    setSelectedTargetBudget(budgetId);
+  };
+
+  const handleConfirmBalance = () => {
+    if (!overBudgetToBalance || !selectedTargetBudget) return;
+    const overAmount = Math.abs(overBudgetToBalance.remaining);
+    const targetBudget = monthlyBudgets.find(b => b.id === selectedTargetBudget);
+    if (!targetBudget || targetBudget.amount - overAmount < 0) return;
+    // Met à jour les deux budgets (modifie les existants)
+    updateBudget({
+      ...targetBudget,
+      amount: targetBudget.amount - overAmount,
+    });
+    updateBudget({
+      ...overBudgetToBalance,
+      amount: overBudgetToBalance.amount + overAmount,
+    });
+    setShowBalanceModal(false);
+    setOverBudgetToBalance(null);
+    setSelectedTargetBudget(null);
   };
 
   const { t } = useTranslation();
@@ -104,9 +146,35 @@ const BudgetsPage: React.FC = () => {
         {budgetsWithProgress.length > 0 ? (
           <div className="space-y-4">
             {budgetsWithProgress.map((budget) => {
-              const category = categories.find((c) => c.name === budget.category);
-              const isOverBudget = budget.percentage >= 100;
-              
+              const categoryNames = budget.budgetCategories || [];
+              const categoryBadges = categoryNames.slice(0, 3).map((catName: string) => {
+                const cat = categories.find((c) => c.name === catName);
+                return cat ? (
+                  <div
+                    key={catName}
+                    className="w-6 h-6 rounded-full mr-1 flex items-center justify-center"
+                    style={{ backgroundColor: cat.color + '30' }}
+                    title={catName}
+                  >
+                    <span style={{ color: cat.color, fontSize: 12 }}>{catName.charAt(0)}</span>
+                  </div>
+                ) : null;
+              });
+              const extraCount = categoryNames.length - 3;
+              let extraBadge = null;
+              if (extraCount > 0) {
+                const extraNames = categoryNames.slice(3).join(', ');
+                extraBadge = (
+                  <div
+                    className="w-6 h-6 rounded-full mr-1 flex items-center justify-center bg-gray-300 text-gray-700 text-xs cursor-pointer"
+                    title={extraNames}
+                  >
+                    +{extraCount}
+                  </div>
+                );
+              }
+              const isOverBudget = budget.remaining < 0;
+              const isFinished = budget.remaining === 0;
               return (
                 <Link 
                   key={budget.id} 
@@ -115,45 +183,59 @@ const BudgetsPage: React.FC = () => {
                 >
                   <div className="flex justify-between items-center mb-1">
                     <div className="flex items-center">
-                      <div 
-                        className="w-8 h-8 rounded-full mr-2 flex items-center justify-center"
-                        style={{ backgroundColor: category?.color + '30' }}
-                      >
-                        <span style={{ color: category?.color }}>{budget.category.charAt(0)}</span>
-                      </div>
-                      <span className="font-medium">{budget.category}</span>
+                      <div className="flex flex-row mr-2">{categoryBadges}{extraBadge}</div>
+                      <span className="font-medium">
+                        {budget.name || categoryNames.join(', ')}
+                      </span>
                     </div>
-                    
-                    {isOverBudget && (
+                    {isFinished ? (
+                      <div className="flex items-center text-gray-400">
+                        <span className="text-sm font-medium">Finished</span>
+                      </div>
+                    ) : isOverBudget && (
                       <div className="flex items-center text-warning-500">
                         <AlertTriangle size={16} className="mr-1" />
                         <span className="text-sm font-medium">Over budget</span>
+                        <button
+                          className="ml-2 btn-outline text-xs px-2 py-1 flex items-center"
+                          title="Équilibrer"
+                          onClick={e => { e.preventDefault(); handleBalanceClick(budget); }}
+                        >
+                          <Scale size={16} />
+                        </button>
                       </div>
                     )}
                   </div>
-                  
                   <div className="flex justify-between text-sm mb-2">
                     <span className="text-gray-500 dark:text-gray-400">
                       Spent: {formatCurrency(budget.spent, settings.currency)}
                     </span>
-                    <span className={`font-medium ${isOverBudget ? 'text-warning-500' : 'text-green-500'}`}>
-                      {isOverBudget ? 'Over by ' : 'Left: '}
-                      {formatCurrency(
-                        isOverBudget ? -budget.remaining : budget.remaining, 
-                        settings.currency
-                      )}
-                    </span>
+                    {!isFinished && (
+                      <span className={`font-medium ${
+                        isOverBudget
+                          ? 'text-warning-500'
+                          : 'text-green-500'
+                      }`}>
+                        {isOverBudget ? 'Over by ' : 'Left: '}
+                        {formatCurrency(
+                          isOverBudget ? -budget.remaining : budget.remaining, 
+                          settings.currency
+                        )}
+                      </span>
+                    )}
                   </div>
-                  
                   <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 mb-1">
                     <div
                       className={`h-2.5 rounded-full ${
-                        isOverBudget ? 'bg-warning-500' : 'bg-primary-600'
+                        isOverBudget
+                          ? 'bg-warning-500'
+                          : isFinished
+                            ? 'bg-gray-400'
+                            : 'bg-primary-600'
                       }`}
                       style={{ width: `${Math.min(budget.percentage, 100)}%` }}
                     ></div>
                   </div>
-                  
                   <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
                     <span>
                       {formatCurrency(budget.spent, settings.currency)} of {formatCurrency(budget.amount, settings.currency)}
@@ -227,6 +309,35 @@ const BudgetsPage: React.FC = () => {
               >
                 Reset to Plan
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showBalanceModal && overBudgetToBalance && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50 p-4">
+          <div className="card max-w-sm w-full animate-fade-in">
+            <h3 className="text-xl font-bold mb-4">Équilibrer le budget</h3>
+            <p className="mb-4">Sélectionnez un budget à débiter pour couvrir le dépassement de <b>{formatCurrency(Math.abs(overBudgetToBalance.remaining), settings.currency)}</b> :</p>
+            <div className="space-y-2 mb-4">
+              {budgetsWithProgress.filter(b => b.id !== overBudgetToBalance.id && b.remaining > 0).map(b => (
+                <label key={b.id} className={`flex items-center p-2 rounded cursor-pointer ${selectedTargetBudget === b.id ? 'bg-primary-100 dark:bg-primary-900/30' : ''}`}>
+                  <input
+                    type="radio"
+                    name="targetBudget"
+                    value={b.id}
+                    checked={selectedTargetBudget === b.id}
+                    onChange={() => handleSelectTargetBudget(b.id)}
+                    className="mr-2"
+                  />
+                  <span className="font-medium">{b.name || b.budgetCategories.join(', ')}</span>
+                  <span className="ml-auto text-xs text-gray-500">Restant : {formatCurrency(b.remaining, settings.currency)}</span>
+                </label>
+              ))}
+            </div>
+            <div className="flex justify-end space-x-3">
+              <button className="btn-outline" onClick={() => setShowBalanceModal(false)}>Annuler</button>
+              <button className="btn-primary" disabled={!selectedTargetBudget} onClick={handleConfirmBalance}>Équilibrer</button>
             </div>
           </div>
         </div>

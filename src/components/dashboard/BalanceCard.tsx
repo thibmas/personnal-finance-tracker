@@ -1,20 +1,34 @@
 import React from 'react';
 import { TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
-import { formatCurrency } from '../../utils/formatters';
+import { formatCurrency, getTransactionsTotalByType, getNetBalance } from '../../utils/formatters';
+import { Transaction } from '../../types';
 
 interface BalanceCardProps {
-  balance: number;
-  income: number;
-  expenses: number;
+  transactions: Transaction[];
   currency: string;
+  startOfMonthDay: number; // jour de début de mois (ex: 1 pour le 1er, 5 pour le 5 du mois)
 }
 
-const BalanceCard: React.FC<BalanceCardProps> = ({
-  balance,
-  income,
-  expenses,
-  currency,
-}) => {
+function getStartOfCurrentPeriod(startOfMonthDay: number): Date {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  if (now.getDate() < startOfMonthDay) {
+    // On est avant le jour de début, donc on prend le mois précédent
+    return new Date(year, month - 1, startOfMonthDay);
+  }
+  return new Date(year, month, startOfMonthDay);
+}
+
+const BalanceCard: React.FC<BalanceCardProps> = ({ transactions, currency, startOfMonthDay }) => {
+  if (!transactions || !Array.isArray(transactions)) {
+    return null;
+  }
+  const startPeriod = getStartOfCurrentPeriod(startOfMonthDay);
+  const filtered = transactions.filter(t => new Date(t.date) >= startPeriod);
+  const income = getTransactionsTotalByType(filtered, 'income');
+  const expenses = getTransactionsTotalByType(filtered, 'expense');
+  const balance = getNetBalance(filtered);
   return (
     <div className="card relative overflow-hidden">
       <div className="absolute top-0 right-0 w-24 h-24 bg-primary-100 dark:bg-primary-900/20 rounded-bl-full opacity-50" />

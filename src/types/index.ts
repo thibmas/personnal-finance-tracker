@@ -10,7 +10,9 @@ export interface Transaction {
 
 export interface Budget {
   id: string;
-  category: string;
+  name?: string;
+  categories?: string[];
+  category?: string;
   amount: number;
   period: 'monthly' | 'yearly';
   startDate: string;

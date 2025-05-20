@@ -90,13 +90,13 @@ const BudgetDetailPage: React.FC = () => {
         
         <div className="flex justify-between items-start mb-6">
           <div>
-            <h2 className="text-xl font-bold mb-2">{budget.category} Budget</h2>
+            <h2 className="text-xl font-bold mb-2">{budget.category}</h2>
             <div className="flex items-center">
               <div 
                 className="w-6 h-6 rounded-full flex items-center justify-center mr-2"
                 style={{ backgroundColor: category?.color + '30' }}
               >
-                <span style={{ color: category?.color }}>{budget.category.charAt(0)}</span>
+                <span style={{ color: category?.color }}>{budget.category?.charAt(0)}</span>
               </div>
               <span className="text-gray-600 dark:text-gray-300">
                 {budget.period === 'monthly' ? 'Monthly' : 'Yearly'} budget

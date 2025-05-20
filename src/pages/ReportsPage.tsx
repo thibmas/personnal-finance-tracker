@@ -33,42 +33,59 @@ const ReportsPage: React.FC = () => {
   const [period, setPeriod] = useState('6months');
   const [chartType, setChartType] = useState('overview');
   
-  // Calculate date range based on period
+  const firstDayOfMonth = settings.firstDayOfMonth || 1;
+
+  // Calcule la date de début de la période en tenant compte du paramètre de début de mois
+  function getStartOfPeriod(baseDate: Date, monthsBack: number, startDay: number) {
+    const ref = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate());
+    ref.setDate(startDay);
+    if (baseDate.getDate() < startDay) {
+      ref.setMonth(ref.getMonth() - 1);
+    }
+    ref.setMonth(ref.getMonth() - monthsBack);
+    return ref;
+  }
+
   const endDate = new Date();
   let startDate;
-  
+  let monthsBack = 6;
   switch (period) {
     case '1month':
-      startDate = subMonths(endDate, 1);
+      monthsBack = 1;
       break;
     case '3months':
-      startDate = subMonths(endDate, 3);
+      monthsBack = 3;
       break;
     case '6months':
-      startDate = subMonths(endDate, 6);
+      monthsBack = 6;
       break;
     case '12months':
-      startDate = subMonths(endDate, 12);
+      monthsBack = 12;
       break;
     default:
-      startDate = subMonths(endDate, 6);
+      monthsBack = 6;
   }
-  
-  // Get all months in the range
-  const months = eachMonthOfInterval({ start: startDate, end: endDate });
+  startDate = getStartOfPeriod(endDate, monthsBack, firstDayOfMonth);
+
+  // Génère les débuts de mois personnalisés pour la période
+  const months = [];
+  let current = new Date(startDate);
+  while (current < endDate) {
+    months.push(new Date(current));
+    current.setMonth(current.getMonth() + 1);
+  }
   
   // Filter transactions by date range
   const filteredTransactions = transactions.filter(
     (t) => new Date(t.date) >= startDate && new Date(t.date) <= endDate
   );
   
-  // Group transactions by month
-  const transactionsByMonth = months.map((month) => {
-    const monthStart = new Date(month.getFullYear(), month.getMonth(), 1);
-    const monthEnd = new Date(month.getFullYear(), month.getMonth() + 1, 0);
-    
+  // Adapter le groupement par mois pour utiliser les débuts/fin personnalisés
+  const transactionsByMonth = months.map((monthStart, idx) => {
+    const nextMonth = new Date(monthStart);
+    nextMonth.setMonth(nextMonth.getMonth() + 1);
     return filteredTransactions.filter(
-      (t) => new Date(t.date) >= monthStart && new Date(t.date) <= monthEnd
+      (t) => new Date(t.date) >= monthStart && new Date(t.date) < nextMonth
     );
   });
   
@@ -166,7 +183,7 @@ const ReportsPage: React.FC = () => {
       y: {
         beginAtZero: true,
         ticks: {
-          callback: (value: number) => formatCurrency(value, settings.currency, undefined, false),
+          callback: (tickValue: string | number) => formatCurrency(Number(tickValue), settings.currency),
         },
       },
     },

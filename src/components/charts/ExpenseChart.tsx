@@ -30,12 +30,12 @@ const ExpenseChart: React.FC<ExpenseChartProps> = ({ transactions }) => {
     // Sort by amount (descending)
     const sortedCategories = Object.entries(expensesByCategory)
       .sort(([, a], [, b]) => b - a)
-      .slice(0, 6); // Limit to top 6 categories
+      .slice(0, 8); // Limit to top 6 categories
     
     // Sum all other categories if there are more than 6
     const otherAmount = Object.entries(expensesByCategory)
       .sort(([, a], [, b]) => b - a)
-      .slice(6)
+      .slice(8)
       .reduce((sum, [, amount]) => sum + amount, 0);
     
     // Add "Other" category if needed
