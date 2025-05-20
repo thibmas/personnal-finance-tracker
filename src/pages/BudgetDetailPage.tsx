@@ -36,15 +36,21 @@ const BudgetDetailPage: React.FC = () => {
     );
   }
   
-  const category = categories.find((c) => c.name === budget.category);
-  const spent = getBudgetSpent(budget, transactions);
-  const remaining = getBudgetRemaining(budget, transactions);
-  const percentage = getBudgetPercentage(budget, transactions);
+  const budgetCategories = (budget.categories && Array.isArray(budget.categories)
+    ? budget.categories
+    : [budget.category]
+  ).filter((c): c is string => typeof c === 'string');
+
+  const spent = transactions
+    .filter((t) => t.type === 'expense' && budgetCategories.includes(t.category))
+    .reduce((sum, t) => sum + t.amount, 0);
+  const remaining = budget.amount - spent;
+  const percentage = Math.min((spent / budget.amount) * 100, 100);
   const isOverBudget = percentage >= 100;
-  
+
   // Get related transactions
   const relatedTransactions = transactions
-    .filter((t) => t.type === 'expense' && t.category === budget.category)
+    .filter((t) => t.type === 'expense' && budgetCategories.includes(t.category))
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   
   const handleDelete = () => {
@@ -85,19 +91,34 @@ const BudgetDetailPage: React.FC = () => {
       <div className="card mb-6 relative overflow-hidden">
         <div 
           className="absolute top-0 right-0 w-32 h-32 rounded-bl-full opacity-10"
-          style={{ backgroundColor: category?.color || '#6B7280' }}
+          style={{ backgroundColor: (categories.find((c) => c.name === budgetCategories[0])?.color) || '#6B7280' }}
         />
         
         <div className="flex justify-between items-start mb-6">
           <div>
-            <h2 className="text-xl font-bold mb-2">{budget.category}</h2>
+            <h2 className="text-xl font-bold mb-2">{budget.name || budgetCategories.join(', ')}</h2>
             <div className="flex items-center">
-              <div 
-                className="w-6 h-6 rounded-full flex items-center justify-center mr-2"
-                style={{ backgroundColor: category?.color + '30' }}
-              >
-                <span style={{ color: category?.color }}>{budget.category?.charAt(0)}</span>
-              </div>
+              {budgetCategories.slice(0, 3).map((catName: string) => {
+                const cat = categories.find((c) => c.name === catName);
+                return cat ? (
+                  <div
+                    key={catName}
+                    className="w-6 h-6 rounded-full flex items-center justify-center mr-2"
+                    style={{ backgroundColor: cat.color + '30' }}
+                    title={catName}
+                  >
+                    <span style={{ color: cat.color }}>{catName.charAt(0)}</span>
+                  </div>
+                ) : null;
+              })}
+              {budgetCategories.length > 3 && (
+                <div
+                  className="w-6 h-6 rounded-full flex items-center justify-center mr-2 bg-gray-300 text-gray-700 text-xs cursor-pointer"
+                  title={budgetCategories.slice(3).join(', ')}
+                >
+                  +{budgetCategories.length - 3}
+                </div>
+              )}
               <span className="text-gray-600 dark:text-gray-300">
                 {budget.period === 'monthly' ? 'Monthly' : 'Yearly'} budget
               </span>

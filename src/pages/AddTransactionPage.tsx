@@ -13,7 +13,7 @@ const AddTransactionPage: React.FC<AddTransactionPageProps> = ({ type }) => {
   
   const filteredCategories = categories.filter(
     (category) => category.type === type || category.type === 'both'
-  );
+  ).sort((a, b) => a.name.localeCompare(b.name));
   
   const [formData, setFormData] = useState({
     amount: '',

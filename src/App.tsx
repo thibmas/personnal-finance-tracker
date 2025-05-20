@@ -15,6 +15,7 @@ import BudgetDetailPage from './pages/BudgetDetailPage';
 import PlannedBudgetPage from './pages/PlannedBudgetPage';
 import EditTransactionPage from './pages/EditTransactionPage';
 import EditBudgetPage from './pages/EditBudgetPage';
+import AddBudgetPage from './pages/AddBudgetPage';
 
 function App() {
   const location = useLocation();
@@ -31,6 +32,7 @@ function App() {
         <Route path="incomes/:id" element={<TransactionDetailPage type="income" />} />
         <Route path="budgets" element={<BudgetsPage />} />
         <Route path="budgets/planned" element={<PlannedBudgetPage />} />
+        <Route path="budgets/add" element={<AddBudgetPage />} />
         <Route path="budgets/:id" element={<BudgetDetailPage />} />
         <Route path="budgets/:id/edit" element={<EditBudgetPage />} />
         <Route path="reports" element={<ReportsPage />} />

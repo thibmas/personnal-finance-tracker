@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Filter, AlertTriangle, Copy, ClipboardList, Scale } from 'lucide-react';
+import { Plus, Filter, AlertTriangle, Copy, ClipboardList, Scale, CheckCircle2 } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import { 
   formatCurrency, 
@@ -20,6 +20,9 @@ const BudgetsPage: React.FC = () => {
   const [showBalanceModal, setShowBalanceModal] = useState(false);
   const [overBudgetToBalance, setOverBudgetToBalance] = useState<any>(null);
   const [selectedTargetBudget, setSelectedTargetBudget] = useState<string | null>(null);
+  const [showCloseModal, setShowCloseModal] = useState(false);
+  const [budgetToClose, setBudgetToClose] = useState<any>(null);
+  const [selectedCloseTarget, setSelectedCloseTarget] = useState<string | null>(null);
   
   // Filter transactions by date range
   const [year, month] = selectedMonth.split('-').map(Number);
@@ -55,7 +58,19 @@ const BudgetsPage: React.FC = () => {
       percentage,
       budgetCategories,
     };
-  }).sort((a, b) => b.percentage - a.percentage);
+  })
+  .sort((a, b) => {
+    // Tri : dépassés d'abord, puis en cours, puis clôturés
+    const aOver = a.remaining < 0;
+    const bOver = b.remaining < 0;
+    const aFinished = a.remaining === 0;
+    const bFinished = b.remaining === 0;
+    if (aOver && !bOver) return -1;
+    if (!aOver && bOver) return 1;
+    if (!aFinished && bFinished) return -1;
+    if (aFinished && !bFinished) return 1;
+    return 0;
+  });
   
   const months = [];
   const today = new Date();
@@ -113,12 +128,49 @@ const BudgetsPage: React.FC = () => {
     setSelectedTargetBudget(null);
   };
 
+  const handleCloseClick = (budget: any) => {
+    setBudgetToClose(budget);
+    setShowCloseModal(true);
+  };
+
+  const handleSelectCloseTarget = (budgetId: string) => {
+    setSelectedCloseTarget(budgetId);
+  };
+
+  const handleConfirmClose = () => {
+    if (!budgetToClose) return;
+    const remaining = budgetToClose.remaining;
+    // Si un budget cible est sélectionné, reverse le restant
+    if (selectedCloseTarget && remaining > 0) {
+      const targetBudget = monthlyBudgets.find(b => b.id === selectedCloseTarget);
+      if (targetBudget) {
+        updateBudget({
+          ...targetBudget,
+          amount: targetBudget.amount + remaining,
+        });
+      }
+    }
+    // Clôture le budget en mettant le montant à ce qui a été dépensé
+    updateBudget({
+      ...budgetToClose,
+      amount: budgetToClose.spent,
+    });
+    setShowCloseModal(false);
+    setBudgetToClose(null);
+    setSelectedCloseTarget(null);
+  };
+
   const { t } = useTranslation();
   
   return (
     <div className="page-container">
       <header className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Budgets</h1>
+        <div>
+          <h1 className="text-2xl font-bold">Budgets</h1>
+          <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Total du budget : {formatCurrency(budgetsWithProgress.reduce((sum, b) => sum + b.amount, 0), settings.currency)}
+          </div>
+        </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowResetConfirm(true)}
@@ -188,23 +240,35 @@ const BudgetsPage: React.FC = () => {
                         {budget.name || categoryNames.join(', ')}
                       </span>
                     </div>
-                    {isFinished ? (
-                      <div className="flex items-center text-gray-400">
-                        <span className="text-sm font-medium">Finished</span>
-                      </div>
-                    ) : isOverBudget && (
-                      <div className="flex items-center text-warning-500">
-                        <AlertTriangle size={16} className="mr-1" />
-                        <span className="text-sm font-medium">Over budget</span>
+                    <div className="flex items-center gap-2">
+                      {isFinished ? (
+                        <div className="flex items-center text-gray-400">
+                          <span className="text-sm font-medium">Finished</span>
+                        </div>
+                      ) : isOverBudget && (
+                        <div className="flex items-center text-warning-500">
+                          <AlertTriangle size={16} className="mr-1" />
+                          <span className="text-sm font-medium">Over budget</span>
+                          <button
+                            className="ml-2 btn-outline text-xs px-2 py-1 flex items-center"
+                            title="Équilibrer"
+                            onClick={e => { e.preventDefault(); handleBalanceClick(budget); }}
+                          >
+                            <Scale size={16} />
+                          </button>
+                        </div>
+                      )}
+                      {/* Bouton Clôturer */}
+                      {!isFinished && !isOverBudget && (
                         <button
                           className="ml-2 btn-outline text-xs px-2 py-1 flex items-center"
-                          title="Équilibrer"
-                          onClick={e => { e.preventDefault(); handleBalanceClick(budget); }}
+                          title="Clôturer le budget"
+                          onClick={e => { e.preventDefault(); handleCloseClick(budget); }}
                         >
-                          <Scale size={16} />
+                          <CheckCircle2 size={16} />
                         </button>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                   <div className="flex justify-between text-sm mb-2">
                     <span className="text-gray-500 dark:text-gray-400">
@@ -338,6 +402,35 @@ const BudgetsPage: React.FC = () => {
             <div className="flex justify-end space-x-3">
               <button className="btn-outline" onClick={() => setShowBalanceModal(false)}>Annuler</button>
               <button className="btn-primary" disabled={!selectedTargetBudget} onClick={handleConfirmBalance}>Équilibrer</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showCloseModal && budgetToClose && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50 p-4">
+          <div className="card max-w-sm w-full animate-fade-in">
+            <h3 className="text-xl font-bold mb-4">Clôturer le budget</h3>
+            <p className="mb-4">Voulez-vous reverser le reste de <b>{formatCurrency(budgetToClose.remaining, settings.currency)}</b> sur un autre budget ? (optionnel)</p>
+            <div className="space-y-2 mb-4">
+              {budgetsWithProgress.filter(b => b.id !== budgetToClose.id && b.remaining > 0).map(b => (
+                <label key={b.id} className={`flex items-center p-2 rounded cursor-pointer ${selectedCloseTarget === b.id ? 'bg-primary-100 dark:bg-primary-900/30' : ''}`}>
+                  <input
+                    type="radio"
+                    name="closeTargetBudget"
+                    value={b.id}
+                    checked={selectedCloseTarget === b.id}
+                    onChange={() => handleSelectCloseTarget(b.id)}
+                    className="mr-2"
+                  />
+                  <span className="font-medium">{b.name || b.budgetCategories.join(', ')}</span>
+                  <span className="ml-auto text-xs text-gray-500">Restant : {formatCurrency(b.remaining, settings.currency)}</span>
+                </label>
+              ))}
+            </div>
+            <div className="flex justify-end space-x-3">
+              <button className="btn-outline" onClick={() => setShowCloseModal(false)}>Annuler</button>
+              <button className="btn-primary" onClick={handleConfirmClose}>Clôturer</button>
             </div>
           </div>
         </div>
